@@ -112,3 +112,56 @@ Free the underlying allocation for `blob`.
 function free(blob::Blob)
     Libc.free(getfield(blob, :base))
 end
+
+function similar_immutable(x::Tx) where Tx
+    isbits(x) && return Tx
+    fn = fieldnames(Tx)
+    ft = []
+    for i in fn
+        y = getfield(x, i)
+        newtype = transform_type(y)
+        isbitstype(newtype) || error("$i::$newtype is not a bitstype")
+        push!(ft, newtype)
+    end
+    return NamedTuple{(fn...,), Tuple{ft...}}
+end
+
+transform_type(y) = typeof(y)
+transform_type(y::String) = BlobString
+transform_type(y::Vector{T}) where T = BlobVector{T}
+
+"""
+    malloc_and_init(x)
+
+Allocate and initialize a new `Blob` using the contents of `x`.
+
+If `x` contains mutable components, these are transformed using `transform_type` to (hopefully) an immutable type. 
+"""
+function malloc_and_init(x)
+    T = similar_immutable(x)
+    fn = fieldnames(typeof(x))
+    size = sum(sizeof(getfield(x, i)) + extra_size(T.parameters[2].parameters[i]) for i in 1:length(fn))
+    blob = Blob{T}(Libc.malloc(size * 10), 0, size)
+    used = init(blob)
+    for fn in fieldnames(typeof(x))
+        used = init_value(getproperty(blob, fn), used, getproperty(x, fn))
+    end
+    blob
+end
+
+function init_value(x, free, val)
+    x[] = val
+    return free
+end
+# init_value(x::Blob{BlobString}, free, val::Union{String, BlobString}) = unsafe_copyto!(x[], val)
+function init_value(blob::Blob{BlobVector{T}}, free::Blob{Nothing}, val::Vector{T}) where T
+    sz = sizeof(val)
+    blob.data[] = Blob{T}(free)
+    blob.length[] = length(val)
+    unsafe_copyto!(Ptr{T}(pointer(free)), pointer(val), sz)
+    free + sz
+end
+
+extra_size(x) = 0
+extra_size(::Type{BlobVector{T}}) where T = sizeof(Int) * 2
+
