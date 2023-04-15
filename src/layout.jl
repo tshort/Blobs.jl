@@ -141,10 +141,13 @@ function malloc_and_init(x)
     T = similar_immutable(x)
     fn = fieldnames(typeof(x))
     size = sum(sizeof(getfield(x, i)) + extra_size(T.parameters[2].parameters[i]) for i in 1:length(fn))
-    blob = Blob{T}(Libc.malloc(size * 10), 0, size)
-    used = init(blob)
+    @show ptr = Libc.malloc(size)
+    blob = Blob{T}(ptr, 0, size)
+    @show used = init(blob)
+    @show size
     for fn in fieldnames(typeof(x))
-        used = init_value(getproperty(blob, fn), used, getproperty(x, fn))
+        @show fn
+        @show used = init_value(getproperty(blob, fn), used, getproperty(x, fn))
     end
     blob
 end
@@ -158,7 +161,9 @@ function init_value(blob::Blob{BlobVector{T}}, free::Blob{Nothing}, val::Vector{
     sz = sizeof(val)
     blob.data[] = Blob{T}(free)
     blob.length[] = length(val)
-    unsafe_copyto!(Ptr{T}(pointer(free)), pointer(val), sz)
+    unsafe_copyto!(Ptr{T}(pointer(free)), pointer(val), length(val))
+    @show Ptr{T}(pointer(free))
+    @show pointer(val)
     free + sz
 end
 
