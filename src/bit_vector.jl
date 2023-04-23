@@ -1,6 +1,6 @@
 struct BlobBit
-    data::Blob{UInt64}
-    mask::UInt64
+    data::Blob{UInt}
+    mask::UInt
 end
 
 @inline Base.@propagate_inbounds function Base.getindex(blob::BlobBit)::Bool
@@ -16,8 +16,8 @@ end
 
 "A fixed-length bit vector whose data is stored in a Blob."
 struct BlobBitVector <: AbstractArray{Bool, 1}
-    data::Blob{UInt64}
-    length::Int64
+    data::Blob{UInt}
+    length::Int
 end
 
 Base.@propagate_inbounds function get_address(blob::BlobBitVector, i::Int)::BlobBit
@@ -25,7 +25,7 @@ Base.@propagate_inbounds function get_address(blob::BlobBitVector, i::Int)::Blob
         (i < 1 || i > blob.length) && throw(BoundsError(blob, i))
     end
     i1, i2 = Base.get_chunks_id(i)
-    BlobBit(blob.data + (i1-1)*self_size(UInt64), UInt64(1) << i2)
+    BlobBit(blob.data + (i1-1)*self_size(UInt), UInt(1) << i2)
 end
 
 # blob interface
@@ -42,7 +42,7 @@ end
     get_address(blob[], i)
 end
 
-function unsafe_resize!(blob::BlobBitVector, length::Int64)
+function unsafe_resize!(blob::BlobBitVector, length::Int)
     blob.length[] = length
 end
 

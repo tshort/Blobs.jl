@@ -4,13 +4,13 @@ using Blobs
 using Test
 
 struct Foo
-    x::Int64
+    x::Int
     y::Float32 # tests conversion and alignment
 end
 
 # Blob
 
-blob = Blob{Int64}(Libc.malloc(16), 0, 8)
+blob = Blob{Int}(Libc.malloc(16), 0, 8)
 @test_nowarn blob[]
 @test_throws BoundsError (blob+1)[]
 if Base.JLOptions().check_bounds == 0
@@ -27,7 +27,7 @@ foo.y[] = 2.5
 @test foo[] == Foo(1,2.5)
 # test interior pointers
 @test foo == foo
-@test pointer(foo.y) == pointer(foo) + sizeof(Int64)
+@test pointer(foo.y) == pointer(foo) + sizeof(Int)
 
 foo2_ref = Ref(Foo(42, 3.14))
 foo2 = Blob(foo2_ref)
@@ -53,10 +53,10 @@ foo.x[] = 1
 
 # BlobVector
 
-@test Blobs.self_size(BlobVector{Int64}) == 16
+@test Blobs.self_size(BlobVector{Int}) == 16
 
-data = Blob{Int64}(Libc.malloc(sizeof(Int64) * 4), 0, sizeof(Int64) * 3)
-bv = BlobVector{Int64}(data, 4)
+data = Blob{Int}(Libc.malloc(sizeof(Int) * 4), 0, sizeof(Int) * 3)
+bv = BlobVector{Int}(data, 4)
 @test_nowarn bv[3]
 @test_throws BoundsError bv[4]
 if Base.JLOptions().check_bounds == 0
@@ -118,7 +118,7 @@ copy!(bv3, 1, bv3, 2, 4)
 @test Blobs.child_size(BlobBitVector, 64*3) == 8*3
 @test Blobs.child_size(BlobBitVector, 64*3 + 1) == 8*4
 
-data = Blob{UInt64}(Libc.malloc(sizeof(UInt64)*4), 0, sizeof(UInt64)*3)
+data = Blob{UInt}(Libc.malloc(sizeof(UInt)*4), 0, sizeof(UInt)*3)
 bv = BlobBitVector(data, 64*4)
 @test_nowarn bv[64*3]
 @test_throws BoundsError bv[64*3 + 1]
@@ -224,14 +224,14 @@ struct PackedMemoryArray{K,V}
      #...other stuff
 end
 
-function Blobs.child_size(::Type{PackedMemoryArray{K,V}}, length::Int64) where {K,V}
+function Blobs.child_size(::Type{PackedMemoryArray{K,V}}, length::Int) where {K,V}
     T = PackedMemoryArray{K,V}
     +(Blobs.child_size(fieldtype(T, :keys), length),
       Blobs.child_size(fieldtype(T, :values), length),
       Blobs.child_size(fieldtype(T, :mask), length))
   end
 
-function Blobs.init(pma::Blob{PackedMemoryArray{K,V}}, free::Blob{Nothing}, length::Int64) where {K,V}
+function Blobs.init(pma::Blob{PackedMemoryArray{K,V}}, free::Blob{Nothing}, length::Int) where {K,V}
     free = Blobs.init(pma.keys, free, length)
     free = Blobs.init(pma.values, free, length)
     free = Blobs.init(pma.mask, free, length)
@@ -240,13 +240,13 @@ function Blobs.init(pma::Blob{PackedMemoryArray{K,V}}, free::Blob{Nothing}, leng
     free
 end
 
-pma = Blobs.malloc_and_init(PackedMemoryArray{Int64, Float32}, 3)
+pma = Blobs.malloc_and_init(PackedMemoryArray{Int, Float32}, 3)
 @test pma.count[] == 0
 @test pma.keys.length[] == 3
 # tests fill!
 @test !any(pma.mask[])
 # tests pointer <-> offset conversion
-@test unsafe_load(convert(Ptr{Int64}, pointer(pma)), 1) == Blobs.self_size(PackedMemoryArray{Int64, Float32})
+@test unsafe_load(convert(Ptr{Int}, pointer(pma)), 1) == Blobs.self_size(PackedMemoryArray{Int, Float32})
 # tests nested interior pointers
 pma2 = pma.mask[2]
 @test pma2[] == false
@@ -271,25 +271,25 @@ end
 
 @test Blobs.self_size(Bar) == 8 + 16 + 1 + 16 + 8 # Blob{Quux} is smaller in the blob
 
-function Blobs.child_size(::Type{Quux}, x_len::Int64, y::Float64)
+function Blobs.child_size(::Type{Quux}, x_len::Int, y::Float64)
     T = Quux
     +(Blobs.child_size(fieldtype(T, :x), x_len))
 end
 
-function Blobs.child_size(::Type{Bar}, b_len::Int64, c::Bool, d_len::Int64, x_len::Int64, y::Float64)
+function Blobs.child_size(::Type{Bar}, b_len::Int, c::Bool, d_len::Int, x_len::Int, y::Float64)
     T = Bar
     +(Blobs.child_size(fieldtype(T, :b), b_len),
       Blobs.child_size(fieldtype(T, :d), d_len),
       Blobs.child_size(fieldtype(T, :e), x_len, y))
 end
 
-function Blobs.init(quux::Blob{Quux}, free::Blob{Nothing}, x_len::Int64, y::Float64)
+function Blobs.init(quux::Blob{Quux}, free::Blob{Nothing}, x_len::Int, y::Float64)
     free = Blobs.init(quux.x, free, x_len)
     quux.y[] = y
     free
 end
 
-function Blobs.init(bar::Blob{Bar}, free::Blob{Nothing}, b_len::Int64, c::Bool, d_len::Int64, x_len::Int64, y::Float64)
+function Blobs.init(bar::Blob{Bar}, free::Blob{Nothing}, b_len::Int, c::Bool, d_len::Int, x_len::Int, y::Float64)
     free = Blobs.init(bar.b, free, b_len)
     free = Blobs.init(bar.d, free, d_len)
     free = Blobs.init(bar.e, free, x_len, y)
@@ -307,7 +307,7 @@ quux = bar.e[]
 @test quux.y[] == 1.5
 
 # Tuples
-bt = Blobs.malloc_and_init(Tuple{Int64,Int64})
+bt = Blobs.malloc_and_init(Tuple{Int,Int})
 bt[] = (2,3)
 @test bt[] == (2,3)
 @test bt[][1] == 2
@@ -321,7 +321,7 @@ bt[2][] = 42
 # Structs inside tuples
 struct Toto{N}
     data::NTuple{N, UInt8} # Immutable statically sized tuple
-    len::Int64 # in bytes
+    len::Int # in bytes
 end
 
 bt = Blobs.malloc_and_init(Tuple{Toto{1}})

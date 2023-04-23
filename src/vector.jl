@@ -1,7 +1,7 @@
 "A fixed-length vector whose data is stored in a Blob."
 struct BlobVector{T} <: AbstractArray{T, 1}
     data::Blob{T}
-    length::Int64
+    length::Int
 end
 
 function Base.pointer(bv::BlobVector{T}, i::Integer=1) where {T}

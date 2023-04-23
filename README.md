@@ -23,7 +23,7 @@ Acquire a `Ptr{Nothing}` from somewhere:
 
 ``` julia
 julia> struct Foo
-       x::Int64
+       x::Int
        y::Bool
        end
 
@@ -44,7 +44,7 @@ We can access references to fields of Foo using the fieldnames directly:
 
 ``` julia
 julia> foo.x
-Blobs.Blob{Int64}(Ptr{Nothing} @0x0000000004de87c0, 0, 16)
+Blobs.Blob{Int}(Ptr{Nothing} @0x0000000004de87c0, 0, 16)
 
 julia> foo.y
 Blobs.Blob{Bool}(Ptr{Nothing} @0x0000000004de87c0, 8, 16)
@@ -85,7 +85,7 @@ julia> foo.y[]
 false
 
 julia> x = foo.x
-Blobs.Blob{Int64}(Ptr{Nothing} @0x0000000004de87c0, 0, 16)
+Blobs.Blob{Int}(Ptr{Nothing} @0x0000000004de87c0, 0, 16)
 
 julia> x[] = 42
 42
@@ -108,7 +108,7 @@ Assume that we have the following `Foo` struct:
 
 ``` julia
 julia> struct Foo
-       x::Int64
+       x::Int
        y::Bool
        end
 
@@ -120,7 +120,7 @@ Use the `@a` (for address) macro to obtain pointers to the fields of this struct
 
 ``` julia
 julia> @a m.x
-Blob{Int64}(Ptr{Nothing} @0x00007fa0b84234e0, 0, 9)
+Blob{Int}(Ptr{Nothing} @0x00007fa0b84234e0, 0, 9)
 
 julia> @a m.y
 Blob{Bool}(Ptr{Nothing} @0x00007fa0b84234e0, 8, 9)
@@ -152,7 +152,7 @@ julia> @v m.y
 true
 
 julia> x = @a m.x
-Blob{Int64}(Ptr{Nothing} @0x00007fa0b84234e0, 0, 9)
+Blob{Int}(Ptr{Nothing} @0x00007fa0b84234e0, 0, 9)
 
 julia> @v x = 42
 42

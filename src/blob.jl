@@ -3,10 +3,10 @@ A pointer to a `T` stored inside a Blob.
 """
 struct Blob{T}
     base::Ptr{Nothing}
-    offset::Int64
-    limit::Int64
+    offset::Int
+    limit::Int
 
-    function Blob{T}(base::Ptr{Nothing}, offset::Int64, limit::Int64) where {T}
+    function Blob{T}(base::Ptr{Nothing}, offset::Int, limit::Int) where {T}
         @assert isbitstype(T)
         new(base, offset, limit)
     end
@@ -16,7 +16,7 @@ function Blob(ref::Base.RefValue{T}) where T
     Blob{T}(pointer_from_objref(ref), 0, sizeof(T))
 end
 
-function Blob(base::Ptr{T}, offset::Int64 = 0, limit::Int64 = sizeof(T)) where {T}
+function Blob(base::Ptr{T}, offset::Int = 0, limit::Int = sizeof(T)) where {T}
     Blob{T}(Ptr{Nothing}(base), offset, limit)
 end
 
@@ -241,16 +241,16 @@ end
 # patch pointers on the fly during load/store!
 
 function self_size(::Type{Blob{T}}) where T
-    sizeof(Int64)
+    sizeof(Int)
 end
 
 @inline function Base.unsafe_load(blob::Blob{Blob{T}}) where {T}
-    offset = unsafe_load(Blob{Int64}(blob))
+    offset = unsafe_load(Blob{Int}(blob))
     Blob{T}(getfield(blob, :base), getfield(blob, :offset) + offset, getfield(blob, :limit))
 end
 
 @inline function Base.unsafe_store!(blob::Blob{Blob{T}}, value::Blob{T}) where {T}
     assert_same_allocation(blob, value)
     offset = getfield(value, :offset) - getfield(blob, :offset)
-    unsafe_store!(Blob{Int64}(blob), offset)
+    unsafe_store!(Blob{Int}(blob), offset)
 end

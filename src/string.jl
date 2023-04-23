@@ -1,7 +1,7 @@
 "A string whose data is stored in a Blob."
 struct BlobString <: AbstractString
     data::Blob{UInt8}
-    len::Int64 # in bytes
+    len::Int # in bytes
 end
 
 Base.pointer(blob::BlobString) = pointer(blob, 1)
